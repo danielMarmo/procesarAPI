@@ -1,166 +1,217 @@
-import { plataformaicono } from './plataformaicono.js';
+import { plataformaicono } from "./plataformaicono.js";
 
 /*******************************************************************************/
-// Cards de juegos
+// Datos de juegos
 let page = 1;
+let allGames = [];
+let filtroGenero = '';
+let filtroPlataforma = '';
 
 function getGames(page = 1, pageSize = 40) {
-    const url = `https://api.rawg.io/api/games?key=236c519bed714a588c3f1aee662a2c2d&page=${page}&page_size=${pageSize}`;
-    fetch(url)
-        .then(response => response.json())
-        .then(jsondata => procesarGames(jsondata))
-        .catch(error => console.error("Error", error));
+  const url = `https://api.rawg.io/api/games?key=236c519bed714a588c3f1aee662a2c2d&page=${page}&page_size=${pageSize}`;
+  fetch(url)
+    .then((response) => response.json())
+    .then((jsondata) => {
+      allGames = jsondata.results;
+      procesarGames(allGames);
+    })
+    .catch((error) => console.error("Error", error));
 }
 
-function procesarGames(jsondata) {
-    let plantilla = document.getElementById("plantilla");
-    let contenedor = plantilla.parentNode;
-    contenedor.removeChild(plantilla);
+function procesarGames(juegos) {
+  const juegosFiltrados = juegos.filter((game) => {
+    const coincideGenero =
+      !filtroGenero || game.genres.some((g) => g.name === filtroGenero);
+    const coincidePlataforma =
+      !filtroPlataforma || game.platforms.some((p) => p.platform.name === filtroPlataforma);
+    return coincideGenero && coincidePlataforma;
+  });
 
-    contenedor.innerHTML = "";
+  let plantilla = document.getElementById("plantilla");
+  let contenedor = plantilla.parentNode;
 
-    jsondata.results.forEach(game => {
-        let tarjeta = plantilla.cloneNode(true);
-        contenedor.appendChild(tarjeta);
+  const existingCards = contenedor.querySelectorAll(".game-card");
+  existingCards.forEach((card) => card.remove());
 
-        // Asignar imagen del juego
-        let imagen = tarjeta.querySelector("#game_background_image");
-        imagen.setAttribute("src", game.background_image);
-        imagen.setAttribute("alt", game.name);
+  juegosFiltrados.forEach((game) => {
+    let tarjeta = plantilla.cloneNode(true);
+    tarjeta.classList.add("game-card");
+    contenedor.appendChild(tarjeta);
 
-        // Asignar plataformas (íconos)
-        const plataformas = tarjeta.querySelector("#game_platforms");
-        plataformas.innerHTML = "";
+    let imagen = tarjeta.querySelector("#game_background_image");
+    imagen.setAttribute("src", game.background_image);
+    imagen.setAttribute("alt", game.name);
 
-        const uniqueIcons = new Set();
+    const plataformas = tarjeta.querySelector("#game_platforms");
+    plataformas.innerHTML = "";
+    const uniqueIcons = new Set();
 
-        game.platforms.forEach(plataforma => {
-            const platformName = plataforma.platform.name;
-            const iconSrc = plataformaicono[platformName];
+    game.platforms.forEach((plataforma) => {
+      const platformName = plataforma.platform.name;
+      const iconSrc = plataformaicono[platformName];
 
-            if (iconSrc && !uniqueIcons.has(iconSrc)) {
-                uniqueIcons.add(iconSrc);
+      if (iconSrc && !uniqueIcons.has(iconSrc)) {
+        uniqueIcons.add(iconSrc);
 
-                const icono = document.createElement("li"); // Crear un <li> para cada ícono
-                const img = document.createElement("img");
-                img.src = iconSrc;
-                img.alt = platformName;
-                img.style.width = "24px"; // Ajustar tamaño
-                img.style.marginRight = "8px";
-                icono.appendChild(img);
+        const icono = document.createElement("li");
+        const img = document.createElement("img");
+        img.src = iconSrc;
+        img.alt = platformName;
+        img.style.width = "15px";
+        img.style.marginRight = "8px";
+        img.style.filter = "invert(1)";
+        icono.appendChild(img);
 
-                plataformas.appendChild(icono);
-            }
-        });
-
-        // Asignar nombre del juego
-        let nombre = tarjeta.querySelector("#game_name");
-        nombre.textContent = game.name;
-
-        // Asignar géneros
-        const contenedorGeneros = tarjeta.querySelector("#game_genres");
-        contenedorGeneros.innerHTML = ""; // Limpiar contenido previo
-
-        game.genres.forEach(genero => {
-            const genreElement = document.createElement("li"); // Crear un <li> para cada género
-            genreElement.textContent = genero.name;
-            contenedorGeneros.appendChild(genreElement);
-        });
-
-        // Asignar fecha de lanzamiento
-        let released = tarjeta.querySelector("#game_released");
-        released.textContent = "Fecha de salida: " + game.released;
-
-        // Asignar un ID único a la tarjeta
-        tarjeta.setAttribute("id", "game_" + game.id);
+        plataformas.appendChild(icono);
+      }
     });
+
+    let nombre = tarjeta.querySelector("#game_name");
+    nombre.textContent = game.name;
+
+    const contenedorGeneros = tarjeta.querySelector("#game_genres");
+    contenedorGeneros.innerHTML = "";
+
+    game.genres.forEach((genero) => {
+      const genreElement = document.createElement("li");
+      const generosTexto = game.genres.map((genero) => genero.name).join(" - ");
+      contenedorGeneros.textContent = generosTexto;
+    });
+
+    let released = tarjeta.querySelector("#game_released");
+    released.textContent = "Fecha de salida: " + game.released;
+    released.style.fontWeight = "normal";
+
+    tarjeta.setAttribute("id", "game_" + game.id);
+  });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    getGames(page, 40);
+/*******************************************************************************/
+// Filtros
 
-    // Manejo del botón "siguiente"
-    document.querySelector('#paginasiguiente').addEventListener('click', function (event) {
-        event.preventDefault();
-        page += 1;
-        getGames(page, 40); // Recargamos los juegos sin filtros
-    });
+document.addEventListener("DOMContentLoaded", function () {
+  const listaGeneros = document.getElementById("listaGeneros");
+  listaGeneros.addEventListener("click", function (event) {
+    if (event.target.tagName === "A") {
+      event.preventDefault();
+      filtroGenero = event.target.textContent;
+      procesarGames(allGames); 
+    }
+  });
 
-    // Manejo del botón "anterior"
-    document.querySelector('#paginaanterior').addEventListener('click', function (event) {
-        event.preventDefault();
-        if (page > 1) {
-            page -= 1;
-        }
-        getGames(page, 40); // Recargamos los juegos sin filtros
-    });
+  const listaPlataformas = document.getElementById("listaPlataformas");
+  listaPlataformas.addEventListener("click", function (event) {
+    if (event.target.tagName === "A") {
+      event.preventDefault();
+      filtroPlataforma = event.target.textContent;
+      procesarGames(allGames); 
+    }
+  });
 
-    // Limpiar filtros
-    document.querySelector(".limpiarFiltros").addEventListener("click", limpiarFiltros);
+  document.querySelector(".limpiarFiltros").addEventListener("click", function () {
+    filtroGenero = '';
+    filtroPlataforma = '';
+    document.querySelector(".search-input input").value = "";
+    procesarGames(allGames);
+  });
 });
 
 /*******************************************************************************/
-// Cards de plataformas
+// Buscador
+
+document.addEventListener("DOMContentLoaded", () => {
+  const inputBusqueda = document.querySelector(".search-input input");
+  if (inputBusqueda) {
+    inputBusqueda.addEventListener("input", function (event) {
+      const searchTerm = event.target.value.toLowerCase();
+      const juegosFiltrados = allGames.filter((game) =>
+        game.name.toLowerCase().includes(searchTerm)
+      );
+      procesarGames(juegosFiltrados);
+    });
+  } else {
+    console.error("No se encontró el input de búsqueda en el DOM.");
+  }
+});
+
+/*******************************************************************************/
+// Cambiar de Página
+
+document.addEventListener("DOMContentLoaded", function () {
+  getGames(page, 40);
+
+  document.querySelector("#paginasiguiente").addEventListener("click", function (event) {
+    event.preventDefault();
+    page += 1;
+    getGames(page, 40);
+  });
+
+  document.querySelector("#paginaanterior").addEventListener("click", function (event) {
+    event.preventDefault();
+    if (page > 1) {
+      page -= 1;
+    }
+    getGames(page, 40);
+  });
+
+  document.querySelector(".limpiarFiltros").addEventListener("click", function () {
+    document.querySelector(".search-input input").value = "";
+    procesarGames(allGames);
+  });
+});
+
+/*******************************************************************************/
+// Datos de plataformas
 
 fetch("https://api.rawg.io/api/platforms?key=236c519bed714a588c3f1aee662a2c2d")
-    .then(response => response.json())
-    .then(jsondata => procesarPlataformas(jsondata))
-    .catch(error => console.error("Error:", error));
+  .then((response) => response.json())
+  .then((jsondata) => procesarListaPlataformas(jsondata))
+  .catch((error) => console.error("Error:", error));
 
-function procesarPlataformas(jsondata) {
-    let plantilla = document.getElementById("plantilla");
-    let contenedor = plantilla.parentNode;
-    contenedor.removeChild(plantilla);
+function procesarListaPlataformas(jsondata) {
+  const listaPlataformas = document.getElementById("listaPlataformas");
+  listaPlataformas.innerHTML = '';
 
-    jsondata.results.forEach(platform => {
-        let tarjeta = plantilla.cloneNode(true);
-        tarjeta.style.display = "";
-        contenedor.appendChild(tarjeta);
+  jsondata.results.forEach((platform) => {
+    const listado = document.createElement("li");
+    listado.classList.add("dropdown-item"); 
 
-        let imagen = tarjeta.querySelector("#platform_background_image");
-        imagen.setAttribute("src", platform.image_background);
-        imagen.setAttribute("alt", platform.name);
+    const enlace = document.createElement("a");
+    enlace.classList.add("text-decoration-none");
+    enlace.style.color = "white";
+    enlace.href = "#";
+    enlace.textContent = platform.name;
 
-        let nombre = tarjeta.querySelector("#platform_name");
-        nombre.textContent = platform.name;
-
-        let juegosCount = tarjeta.querySelector("#platform_games_count");
-        juegosCount.textContent = "Cantidad de juegos: " + platform.games_count;
-
-        tarjeta.setAttribute("id", "platform_" + platform.id);
-    });
+    listado.appendChild(enlace);
+    listaPlataformas.appendChild(listado);
+  });
 }
 
 /*******************************************************************************/
-// Cards de generos
+// Datos de generos
 
 fetch("https://api.rawg.io/api/genres?key=236c519bed714a588c3f1aee662a2c2d")
-    .then(response => response.json())
-    .then(jsondata => procesarGeneros(jsondata))
-    .catch(error => console.error("Error:", error));
+  .then((response) => response.json())
+  .then((jsondata) => procesarListaGeneros(jsondata))
+  .catch((error) => console.error("Error:", error));
 
-function procesarGeneros(jsondata) {
-    let plantilla = document.getElementById("plantilla");
-    let contenedor = plantilla.parentNode;
-    contenedor.removeChild(plantilla);
+function procesarListaGeneros(jsondata) {
+  const listaGeneros = document.getElementById("listaGeneros");
+  listaGeneros.innerHTML = '';
 
-    jsondata.results.forEach(genre => {
-        let tarjeta = plantilla.cloneNode(true);
-        tarjeta.style.display = "";
-        contenedor.appendChild(tarjeta);
+  jsondata.results.forEach((genre) => {
+    const listado = document.createElement("li");
+    listado.classList.add("dropdown-item"); 
 
-        let imagen = tarjeta.querySelector("#genre_background_image");
-        imagen.setAttribute("src", genre.image_background);
-        imagen.setAttribute("alt", genre.name);
+    const enlace = document.createElement("a");
+    enlace.classList.add("text-decoration-none");
+    enlace.style.color = "white";
+    enlace.href = "#";
+    enlace.textContent = genre.name;
 
-        let nombre = tarjeta.querySelector("#genre_name");
-        nombre.textContent = genre.name;
-
-        let juegosCount = tarjeta.querySelector("#genre_games_count");
-        juegosCount.textContent = "Cantidad de juegos: " + genre.games_count;
-
-        tarjeta.setAttribute("id", "genre_" + genre.id);
-    });
+    listado.appendChild(enlace);
+    listaGeneros.appendChild(listado);
+  });
 }
 
 /*******************************************************************************/
