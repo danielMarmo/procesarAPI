@@ -45,6 +45,7 @@ function procesarGames(juegos) {
 
   juegosFiltrados.forEach((game) => {
     let tarjeta = plantilla.cloneNode(true);
+    tarjeta.classList.remove("d-none");
     tarjeta.classList.add("game-card");
     contenedor.appendChild(tarjeta);
 
