@@ -73,7 +73,7 @@ function crearGrafico(nombresGeneros, juegosPorGenero) {
         data: {
             labels: nombresGeneros,
             datasets: [{
-                label: 'Cantidad de juegos por genero',
+                label: 'Cantidad de juegos',
                 data: juegosPorGenero,
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
@@ -90,3 +90,5 @@ function crearGrafico(nombresGeneros, juegosPorGenero) {
         }
     });
 }
+
+/********************************************************************************/

@@ -73,7 +73,7 @@ function crearGrafico(nombresPlataformas, juegosPorPlataforma) {
     data: {
       labels: nombresPlataformas,
       datasets: [{
-        label: 'Cantidad de juegos por plataforma',
+        label: 'Cantidad de juegos',
         data: juegosPorPlataforma,
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         borderColor: 'rgba(75, 192, 192, 1)',
