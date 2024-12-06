@@ -1,19 +1,24 @@
+let allGenre = [];
+
 fetch("https://api.rawg.io/api/genres?key=236c519bed714a588c3f1aee662a2c2d")
     .then((response) => response.json())
-    .then((jsondata) => procesarGeneros(jsondata))
+    .then((jsondata) => {
+        allGenre = jsondata.results;
+        procesarGeneros(allGenre);
+        datosGrafico(allGenre);
+    })
     .catch((error) => console.error("Error:", error));
 
-function procesarGeneros(jsondata) {
+function procesarGeneros(generos) {
     let plantilla = document.getElementById("plantilla");
     let contenedor = plantilla.parentNode;
-    contenedor.removeChild(plantilla);
 
-    let nombresGeneros = [];
-    let juegosPorGenero = [];
+    while (contenedor.firstChild) {
+        contenedor.removeChild(contenedor.firstChild);
+    }
 
-    jsondata.results.forEach((genre) => {
+    generos.forEach((genre) => {
         let tarjeta = plantilla.cloneNode(true);
-        tarjeta.style.display = "";
         contenedor.appendChild(tarjeta);
 
         let imagen = tarjeta.querySelector("#genre_background_image");
@@ -25,9 +30,35 @@ function procesarGeneros(jsondata) {
 
         let juegosCount = tarjeta.querySelector("#genre_games_count");
         juegosCount.textContent = "Cantidad de juegos: " + genre.games_count;
+    });
+}
 
-        tarjeta.setAttribute("id", "genre_" + genre.id);
+/*******************************************************************************/
+// Buscador
 
+document.addEventListener("DOMContentLoaded", () => {
+    const inputBusqueda = document.querySelector(".search-input input");
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener("input", function (event) {
+            const searchTerm = event.target.value.toLowerCase();
+            const generosFiltrados = allGenre.filter((genre) =>
+                genre.name.toLowerCase().includes(searchTerm)
+            );
+            procesarGeneros(generosFiltrados);
+        });
+    } else {
+        console.error("No se encontró el input de búsqueda en el DOM.");
+    }
+});
+
+/*******************************************************************************/
+// Grafico
+
+function datosGrafico(generos) {
+    let nombresGeneros = [];
+    let juegosPorGenero = [];
+
+    generos.forEach((genre) => {
         nombresGeneros.push(genre.name);
         juegosPorGenero.push(genre.games_count);
     });

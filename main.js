@@ -1,11 +1,14 @@
 import { plataformaicono } from "./plataformaicono.js";
 
-/*******************************************************************************/
-// Datos de juegos
 let page = 1;
 let allGames = [];
 let filtroGenero = '';
 let filtroPlataforma = '';
+let listadoGeneros = new Set();
+let listadoPlataformas = new Set();
+
+/*******************************************************************************/
+// Datos de juegos
 
 function getGames(page = 1, pageSize = 40) {
   const url = `https://api.rawg.io/api/games?key=236c519bed714a588c3f1aee662a2c2d&page=${page}&page_size=${pageSize}`;
@@ -14,6 +17,8 @@ function getGames(page = 1, pageSize = 40) {
     .then((jsondata) => {
       allGames = jsondata.results;
       procesarGames(allGames);
+      cargarListados(jsondata)
+
     })
     .catch((error) => console.error("Error", error));
 }
@@ -32,6 +37,11 @@ function procesarGames(juegos) {
 
   const existingCards = contenedor.querySelectorAll(".game-card");
   existingCards.forEach((card) => card.remove());
+
+  if (juegosFiltrados.length === 0) {
+    mostrarMensajeSinResultados();
+    return;
+  }
 
   juegosFiltrados.forEach((game) => {
     let tarjeta = plantilla.cloneNode(true);
@@ -86,6 +96,55 @@ function procesarGames(juegos) {
   });
 }
 
+/********************************************************************************/
+// Listados para filtrar
+
+function cargarListados(jsondata) {
+  listadoGeneros.clear();
+  jsondata.results.forEach(game => {
+    game.platforms.forEach(plataforma => listadoPlataformas.add(plataforma.platform.name));
+    game.genres.forEach(genero => listadoGeneros.add(genero.name));
+  });
+
+  const listaPlataformas = document.getElementById("listaPlataformas");
+  listaPlataformas.innerHTML = '';
+
+  listadoPlataformas.forEach(plataforma => {
+    const listado = document.createElement("li");
+    listado.classList.add("dropdown-item");
+
+    const enlace = document.createElement("a");
+    enlace.classList.add("text-decoration-none");
+    enlace.style.padding = "5px";
+    enlace.style.color = "white";
+    enlace.href = "#";
+    enlace.textContent = plataforma;
+    enlace.setAttribute('data-platform', plataforma);
+
+    listado.appendChild(enlace);
+    listaPlataformas.appendChild(listado);
+  });
+
+  const listaGeneros = document.getElementById("listaGeneros");
+  listaGeneros.innerHTML = '';
+
+  listadoGeneros.forEach(genero => {
+    const listado = document.createElement("li");
+    listado.classList.add("dropdown-item");
+
+    const enlace = document.createElement("a");
+    enlace.classList.add("text-decoration-none");
+    enlace.style.padding = "5px";
+    enlace.style.color = "white";
+    enlace.href = "#";
+    enlace.textContent = genero;
+    enlace.setAttribute('data-genre', genero);
+
+    listado.appendChild(enlace);
+    listaGeneros.appendChild(listado);
+  });
+}
+
 /*******************************************************************************/
 // Filtros
 
@@ -95,7 +154,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (event.target.tagName === "A") {
       event.preventDefault();
       filtroGenero = event.target.textContent;
-      procesarGames(allGames); 
+      procesarGames(allGames);
     }
   });
 
@@ -104,7 +163,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (event.target.tagName === "A") {
       event.preventDefault();
       filtroPlataforma = event.target.textContent;
-      procesarGames(allGames); 
+      procesarGames(allGames);
     }
   });
 
@@ -112,9 +171,21 @@ document.addEventListener("DOMContentLoaded", function () {
     filtroGenero = '';
     filtroPlataforma = '';
     document.querySelector(".search-input input").value = "";
-    procesarGames(allGames);
+
+    procesarGames(1, 40);
+
+    console.log("Filtros limpiados. Mostrando todos los juegos.");
   });
 });
+
+function mostrarMensajeSinResultados() {
+  const contenedor = document.getElementById("contenedor");
+  if (contenedor) {
+    contenedor.innerHTML = `
+      <p class="text-white">No se encontraron juegos que coincidan con los filtros seleccionados.</p>
+    `;
+  }
+}
 
 /*******************************************************************************/
 // Buscador
@@ -160,58 +231,4 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-/*******************************************************************************/
-// Datos de plataformas
-
-fetch("https://api.rawg.io/api/platforms?key=236c519bed714a588c3f1aee662a2c2d")
-  .then((response) => response.json())
-  .then((jsondata) => procesarListaPlataformas(jsondata))
-  .catch((error) => console.error("Error:", error));
-
-function procesarListaPlataformas(jsondata) {
-  const listaPlataformas = document.getElementById("listaPlataformas");
-  listaPlataformas.innerHTML = '';
-
-  jsondata.results.forEach((platform) => {
-    const listado = document.createElement("li");
-    listado.classList.add("dropdown-item"); 
-
-    const enlace = document.createElement("a");
-    enlace.classList.add("text-decoration-none");
-    enlace.style.color = "white";
-    enlace.href = "#";
-    enlace.textContent = platform.name;
-
-    listado.appendChild(enlace);
-    listaPlataformas.appendChild(listado);
-  });
-}
-
-/*******************************************************************************/
-// Datos de generos
-
-fetch("https://api.rawg.io/api/genres?key=236c519bed714a588c3f1aee662a2c2d")
-  .then((response) => response.json())
-  .then((jsondata) => procesarListaGeneros(jsondata))
-  .catch((error) => console.error("Error:", error));
-
-function procesarListaGeneros(jsondata) {
-  const listaGeneros = document.getElementById("listaGeneros");
-  listaGeneros.innerHTML = '';
-
-  jsondata.results.forEach((genre) => {
-    const listado = document.createElement("li");
-    listado.classList.add("dropdown-item"); 
-
-    const enlace = document.createElement("a");
-    enlace.classList.add("text-decoration-none");
-    enlace.style.color = "white";
-    enlace.href = "#";
-    enlace.textContent = genre.name;
-
-    listado.appendChild(enlace);
-    listaGeneros.appendChild(listado);
-  });
-}
-
-/*******************************************************************************/
+/********************************************************************************/
