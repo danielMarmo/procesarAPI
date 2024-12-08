@@ -1,6 +1,7 @@
 body {
     padding: 0;
     margin: 0;
+    max-width: 100%;
     display: grid;
     min-height: 100dvh;
     grid-template-rows: auto 1fr auto;
